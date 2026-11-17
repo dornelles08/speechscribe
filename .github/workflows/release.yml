@@ -1,0 +1,142 @@
+name: Build & Release SpeechScribe
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout do codigo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias do sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsndfile1 ffmpeg
+
+      - name: Instalar dependencias do sistema (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ffmpeg
+
+      - name: Instalar dependencias Python
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-build.txt
+
+      - name: Gerar icone (placeholder se nao houver)
+        run: |
+          mkdir -p src/speechscribe/resources
+          if [ ! -f src/speechscribe/resources/icon.png ]; then
+            python3 -c "
+from PIL import Image
+img = Image.new('RGBA', (256, 256), (30, 54, 98, 255))
+img.save('src/speechscribe/resources/icon.png')
+"
+          fi
+
+      - name: Build executavel (PyInstaller)
+        run: |
+          pyinstaller build/speechscribe.spec --noconfirm --clean
+
+      - name: Criar AppImage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "AppImage nao gerado automaticamente pelo PyInstaller. Use linuxdeployqt para criar AppImage."
+          # Apenas avisa; o .exe/.app vem do PyInstaller
+          ls -la dist/
+
+      - name: Criar .dmg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil create -volname "SpeechScribe" -srcfolder dist/SpeechScribe.app -ov -format UDZO dist/SpeechScribe-${{ github.run_number }}.dmg
+
+      - name: Listar artefatos
+        run: ls -la dist/
+
+      - name: Upload artefato Linux
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: speechscribe-linux
+          path: dist/speechscribe
+
+      - name: Upload artefato macOS .app
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: speechscribe-macos-app
+          path: dist/SpeechScribe.app
+
+      - name: Upload artefato macOS .dmg
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: speechscribe-macos-dmg
+          path: dist/*.dmg
+
+      - name: Upload artefato Windows .exe
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: speechscribe-windows
+          path: dist/speechscribe.exe
+
+  release:
+    name: Criar Release no GitHub
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar artefatos Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: speechscribe-linux
+          path: release/linux
+
+      - name: Baixar artefatos macOS app
+        uses: actions/download-artifact@v4
+        with:
+          name: speechscribe-macos-app
+          path: release/macos-app
+
+      - name: Baixar artefatos macOS dmg
+        uses: actions/download-artifact@v4
+        with:
+          name: speechscribe-macos-dmg
+          path: release/macos-dmg
+
+      - name: Baixar artefatos Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: speechscribe-windows
+          path: release/windows
+
+      - name: Listar tudo para release
+        run: ls -la release/ release/*/
+
+      - name: Criar release no GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ github.run_number }}"
+          gh release create "$TAG" --title "SpeechScribe $TAG" --notes "Build automático a partir do push na main." --latest \
+            release/linux/speechscribe \
+            release/macos-app/SpeechScribe.app \
+            release/macos-dmg/*.dmg \
+            release/windows/speechscribe.exe 2>/dev/null || true

@@ -1,0 +1,39 @@
+# Bytecode / compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.spec
+*.app
+*.dmg
+*.exe
+.AppImage
+*.deb
+*.rpm
+
+# App data (generated at runtime)
+data/transcricoes/
+data/logs/
+
+# Environment
+.env
