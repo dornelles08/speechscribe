@@ -6,12 +6,14 @@ import html
 import logging
 import os
 import sys
+import time
 from pathlib import Path
 
-from PySide6.QtCore import QMetaObject, QTimer, Qt, QUrl, Signal, Slot
+from PySide6.QtCore import QMetaObject, QThread, QTimer, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QColor, QDesktopServices, QFont, QFontDatabase, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -135,6 +137,22 @@ class SettingsDialog(QDialog):
         grid.addLayout(h, row, 1)
         row += 1
 
+        # Salvar arquivo final da transcricao (.txt)
+        self.chk_save_txt = QCheckBox("Salvar arquivo final da transcricao (.txt)")
+        self.chk_save_txt.setToolTip(
+            "Desmarque se nao quiser gerar o arquivo de texto da sessao."
+        )
+        grid.addWidget(self.chk_save_txt, row, 0, 1, 2)
+        row += 1
+
+        # Salvar segmentos da transcricao (.json)
+        self.chk_save_segments = QCheckBox("Salvar segmentos da transcricao (.json)")
+        self.chk_save_segments.setToolTip(
+            "Desmarque se nao quiser gerar o JSON com os trechos (inicio/fim/texto)."
+        )
+        grid.addWidget(self.chk_save_segments, row, 0, 1, 2)
+        row += 1
+
         # Atualizacoes automaticas
         self.chk_updates = QPushButton("Verificar atualizacoes agora")
         self.chk_updates.setCheckable(True)
@@ -169,6 +187,8 @@ class SettingsDialog(QDialog):
         self.spin_silence.setValue(int(round(silence * 10)))
         self.spin_max_seg.setValue(int(self.config.get("max_segment_s", 15.0)))
         self.edit_out_dir.setText(self.config.get("out_dir", ""))
+        self.chk_save_txt.setChecked(bool(self.config.get("save_txt", True)))
+        self.chk_save_segments.setChecked(bool(self.config.get("save_segments", True)))
 
     def _save(self):
         self.config.set("model", self.cmb_model.currentText())
@@ -183,6 +203,8 @@ class SettingsDialog(QDialog):
         self.config.set("silence_end", self.spin_silence.value() / 10.0)
         self.config.set("max_segment_s", float(self.spin_max_seg.value()))
         self.config.set("out_dir", self.edit_out_dir.text().strip())
+        self.config.set("save_txt", self.chk_save_txt.isChecked())
+        self.config.set("save_segments", self.chk_save_segments.isChecked())
         self.config.set("check_updates", self.chk_updates.isChecked())
         self.config.save()
         self.accept()
@@ -390,7 +412,11 @@ class MainWindow(QMainWindow):
 
         # thread do microfone
         self.thread = QThread(self)
-        self.worker = Worker(device, model, lang, self.out_dir or self.config.get("out_dir"))
+        self.worker = Worker(
+            device, model, lang, self.out_dir or self.config.get("out_dir"),
+            save_txt=self.config.get("save_txt", True),
+            save_segments=self.config.get("save_segments", True),
+        )
         self.worker.open_mic = open_mic
         self.worker.stt = self.stt
         self.worker.moveToThread(self.thread)

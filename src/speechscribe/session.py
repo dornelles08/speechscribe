@@ -16,7 +16,7 @@ from .voice import vcommon as vc
 class Session:
     """Uma gravacao: escreve .txt e .wav na hora e fecha o .json no final."""
 
-    def __init__(self, out_dir, model, lang):
+    def __init__(self, out_dir, model, lang, save_txt=True, save_segments=True):
         self.dir = Path(out_dir)
         self.dir.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
@@ -31,11 +31,14 @@ class Session:
         self.t0 = time.time()
         self.segments = []
         self.words = 0
+        self.save_txt = save_txt
+        self.save_segments = save_segments
         self._txt = None
         self._wav = None
 
     def open(self):
-        self._txt = self.txt_path.open("w", encoding="utf-8")
+        if self.save_txt:
+            self._txt = self.txt_path.open("w", encoding="utf-8")
         self._wav = wave.open(str(self.wav_path), "wb")
         self._wav.setnchannels(1)
         self._wav.setsampwidth(2)
@@ -54,7 +57,7 @@ class Session:
             {"inicio_s": round(start, 2), "fim_s": round(end, 2), "texto": text}
         )
         self.words += len(text.split())
-        if self._txt is not None:
+        if self.save_txt and self._txt is not None:
             self._txt.write(text + "\n")
             self._txt.flush()  # write-through: nada se perde se o app fechar
 
@@ -70,8 +73,9 @@ class Session:
             "duracao_s": round(time.time() - self.t0, 2),
             "modelo": self.model,
             "idioma": self.lang,
-            "segmentos": self.segments,
         }
+        if self.save_segments:
+            data["segmentos"] = self.segments
         self.json_path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )

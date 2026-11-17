@@ -14,7 +14,6 @@ import unicodedata
 from collections import deque
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 SR = 16000
@@ -51,7 +50,6 @@ RED = (50, 50, 220)
 YELLOW = (0, 170, 220)
 GRAY = (90, 90, 90)
 BG = (28, 28, 28)
-FONT = cv2.FONT_HERSHEY_SIMPLEX
 W, H = 640, 360
 
 
@@ -158,8 +156,13 @@ class UtteranceDetector:
         if float(np.sqrt(np.mean(block ** 2))) < ENERGY_MIN:
             return False
         if self.vad is None:
-            import webrtcvad
-            self.vad = webrtcvad.Vad(self.aggr)
+            try:
+                import webrtcvad
+                self.vad = webrtcvad.Vad(self.aggr)
+            except ImportError:  # webrtcvad nao e compatível com este Python: usa apenas energia
+                self.vad = False
+        if self.vad is False:
+            return True  # passou no filtro de energia sem VAD
         pcm = (np.clip(block, -1, 1) * 32767).astype(np.int16).tobytes()
         return self.vad.is_speech(pcm, SR)
 
@@ -432,31 +435,8 @@ def lipsync_score(mar_ts, mar_vals, aud_ts, aud_rms):
     return best, mar_range
 
 
-# ---------------------------------------------------------------- UI minima (OpenCV so aceita ASCII!)
-def new_canvas():
-    return np.full((H, W, 3), BG, np.uint8)
-
-
-def put_text(img, text, org, color=(255, 255, 255), scale=0.7, thick=2):
-    cv2.putText(img, text, org, FONT, scale, (0, 0, 0), thick + 3, cv2.LINE_AA)
-    cv2.putText(img, text, org, FONT, scale, color, thick, cv2.LINE_AA)
-
-
-def center_text(img, text, y, color=(255, 255, 255), scale=1.0, thick=2):
-    (tw, _), _ = cv2.getTextSize(text, FONT, scale, thick)
-    put_text(img, text, (max(8, (img.shape[1] - tw) // 2), y), color, scale, thick)
-
-
-def banner(img, text, color=GRAY, sub=None):
-    h, w = img.shape[:2]
-    cv2.rectangle(img, (0, 0), (w, 48), color, -1)
-    put_text(img, text, (12, 33), scale=0.75)
-    if sub:
-        put_text(img, sub, (12, h - 14), scale=0.6)
-
-
+# ---------------------------------------------------------------- rolling buffer de audio
 class Rolling:
-    """Ultimos N segundos de audio, para desenhar a onda."""
 
     def __init__(self, seconds=2.0):
         self.buf = np.zeros(int(SR * seconds) // W * W, np.float32)
@@ -466,22 +446,8 @@ class Rolling:
         self.buf = np.concatenate([self.buf[n:], block.astype(np.float32)])
 
 
-def draw_wave(img, samples, top, height, color):
-    cols = np.abs(samples.reshape(W, -1)).max(axis=1)
-    mid = top + height // 2
-    for x, v in enumerate(cols):
-        a = int(min(1.0, v * 4) * height / 2)
-        cv2.line(img, (x, mid - a), (x, mid + a), color, 1)
-
-
 def level_frac(rms):
     return float(np.clip((20 * np.log10(rms + 1e-6) + 60) / 60, 0, 1))
-
-
-def draw_meter(img, rms, x, y, w, h, active):
-    cv2.rectangle(img, (x, y), (x + w, y + h), (80, 80, 80), 1)
-    cv2.rectangle(img, (x + 1, y + 1), (x + 1 + int((w - 2) * level_frac(rms)), y + h - 1),
-                  GREEN if active else (140, 140, 140), -1)
 
 
 def edit_text(text, key, maxlen=24):
@@ -490,8 +456,3 @@ def edit_text(text, key, maxlen=24):
     if 32 <= key <= 126 and len(text) < maxlen:
         return text + chr(key)
     return text
-
-
-def show(win, img):
-    cv2.imshow(win, img)
-    cv2.waitKey(1)

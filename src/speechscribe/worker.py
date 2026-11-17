@@ -163,12 +163,14 @@ class Worker(QObject):
     stats = Signal(dict)
 
     def __init__(self, device=None, model=DEFAULT_MODEL, lang=DEFAULT_LANG,
-                 out_dir=None):
+                 out_dir=None, save_txt=True, save_segments=True):
         super().__init__()
         self.device = device
         self.model_size = model
         self.lang = lang
         self.out_dir = out_dir
+        self.save_txt = save_txt
+        self.save_segments = save_segments
         self.open_mic = True
         self.recording = False
         self.session = None
@@ -220,7 +222,10 @@ class Worker(QObject):
     def start_rec(self):
         if self.recording or self.mic is None or self.stt is None:
             return
-        self.session = Session(self.out_dir, self.model_size, self.lang)
+        self.session = Session(
+            self.out_dir, self.model_size, self.lang,
+            save_txt=self.save_txt, save_segments=self.save_segments,
+        )
         self.session.open()
         self.det.reset()
         self._seg_start = None

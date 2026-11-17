@@ -33,6 +33,8 @@ DEFAULTS: dict[str, Any] = {
     "max_segment_s": 15.0,
     "theme": "dark",
     "check_updates": True,
+    "save_txt": True,      # salvar arquivo final da transcricao (.txt)
+    "save_segments": True, # salvar segmentos da transcricao (.json)
 }
 
 

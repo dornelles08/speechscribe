@@ -29,19 +29,22 @@ Gravação e transcrição de voz ao vivo para `.txt`, `.wav` e `.json`, com int
 ```bash
 git clone https://github.com/seu-usuario/speechscribe.git
 cd speechscribe
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# ou .venv\Scripts\activate  # Windows
 
-pip install -r requirements.txt
-python -m speechscribe
+uv sync
+uv run -m speechscribe
+```
+
+Para adicionar uma nova dependência:
+
+```bash
+uv add <pacote>
 ```
 
 ## Build executável
 
 ```bash
-pip install -r requirements-build.txt
-pyinstaller build/speechscribe.spec
+unset VIRTUAL_ENV
+uv run pyinstaller build/speechscribe.spec
 ```
 
 Os artefatos ficam em `dist/`.
