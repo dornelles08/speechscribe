@@ -15,57 +15,39 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - name: Checkout do codigo
+      - name: Checkout do código
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v3
 
-      - name: Instalar dependencias do sistema (Linux)
+      - name: Sincronizar dependências
+        run: uv sync --extra dev
+
+      - name: Instalar dependências do sistema (Linux)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libsndfile1 ffmpeg
 
-      - name: Instalar dependencias do sistema (macOS)
+      - name: Instalar dependências do sistema (macOS)
         if: runner.os == 'macOS'
         run: |
           brew install ffmpeg
 
-      - name: Instalar dependencias Python
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-build.txt
-
-      - name: Gerar icone (placeholder se nao houver)
+      - name: Gerar ícone (placeholder se não houver)
         run: |
           mkdir -p src/speechscribe/resources
           if [ ! -f src/speechscribe/resources/icon.png ]; then
-            python3 -c "
+            uv run python -c "
 from PIL import Image
 img = Image.new('RGBA', (256, 256), (30, 54, 98, 255))
 img.save('src/speechscribe/resources/icon.png')
 "
           fi
 
-      - name: Build executavel (PyInstaller)
-        run: |
-          pyinstaller build/speechscribe.spec --noconfirm --clean
-
-      - name: Criar AppImage (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          echo "AppImage nao gerado automaticamente pelo PyInstaller. Use linuxdeployqt para criar AppImage."
-          # Apenas avisa; o .exe/.app vem do PyInstaller
-          ls -la dist/
-
-      - name: Criar .dmg (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          hdiutil create -volname "SpeechScribe" -srcfolder dist/SpeechScribe.app -ov -format UDZO dist/SpeechScribe-${{ github.run_number }}.dmg
+      - name: Build executável (PyInstaller)
+        run: uv run pyinstaller build/speechscribe.spec --noconfirm --clean
 
       - name: Listar artefatos
         run: ls -la dist/

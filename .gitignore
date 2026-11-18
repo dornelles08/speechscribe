@@ -20,16 +20,21 @@ env/
 Thumbs.db
 
 # Build / packaging
-build/
 dist/
 *.egg-info/
-*.spec
 *.app
 *.dmg
 *.exe
 .AppImage
 *.deb
 *.rpm
+
+# Pasta de build temporaria do PyInstaller (arquivos .toc, .pyz, etc.)
+# Nao versionar o conteudo temporario, exceto arquivos de configuracao do build
+!build/
+build/*
+!build/speechscribe.spec
+!build/Info.plist
 
 # App data (generated at runtime)
 data/transcricoes/
