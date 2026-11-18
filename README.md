@@ -40,6 +40,13 @@ Para adicionar uma nova dependência:
 uv add <pacote>
 ```
 
+Para rodar os testes:
+
+```bash
+uv sync --extra dev
+uv run pytest tests/
+```
+
 ## Build executável
 
 ```bash
@@ -48,6 +55,8 @@ uv run pyinstaller build/speechscribe.spec
 ```
 
 Os artefatos ficam em `dist/`.
+
+Os modelos Whisper **não são empacotados** no instalador (seriam centenas de MBs a vários GBs). Eles são baixados automaticamente do Hugging Face na primeira execução do app, de acordo com o modelo selecionado nas configurações.
 
 ## CI/CD
 
