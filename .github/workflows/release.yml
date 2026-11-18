@@ -22,7 +22,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Sincronizar dependências
-        run: uv sync
+        run: uv pip install -e .
 
       - name: Instalar dependências do sistema (Linux)
         if: runner.os == 'Linux'
@@ -37,9 +37,6 @@ jobs:
 
       - name: Build executável (PyInstaller)
         run: uv run pyinstaller build/speechscribe.spec --noconfirm --clean
-
-      - name: Listar artefatos
-        run: ls -la dist/ || true
 
       - name: Upload artefato Linux
         if: runner.os == 'Linux'
