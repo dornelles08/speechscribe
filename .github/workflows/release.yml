@@ -39,11 +39,7 @@ jobs:
         run: |
           mkdir -p src/speechscribe/resources
           if [ ! -f src/speechscribe/resources/icon.png ]; then
-            uv run python -c "
-from PIL import Image
-img = Image.new('RGBA', (256, 256), (30, 54, 98, 255))
-img.save('src/speechscribe/resources/icon.png')
-"
+            uv run python -c 'from PIL import Image; Image.new("RGBA", (256, 256), (30, 54, 98, 255)).save("src/speechscribe/resources/icon.png")'
           fi
 
       - name: Build executável (PyInstaller)
