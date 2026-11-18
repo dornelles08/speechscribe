@@ -22,7 +22,7 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: Sincronizar dependências
-        run: uv sync --extra dev
+        run: uv sync
 
       - name: Instalar dependências do sistema (Linux)
         if: runner.os == 'Linux'
