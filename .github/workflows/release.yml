@@ -39,14 +39,16 @@ jobs:
         run: uv run pyinstaller build/speechscribe.spec --noconfirm --clean
 
       - name: Listar artefatos
-        run: ls -la dist/
+        run: ls -la dist/ || true
 
       - name: Upload artefato Linux
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: speechscribe-linux
-          path: dist/speechscribe
+          path: |
+            dist/speechscribe
+            dist/speechscribe/speechscribe
 
       - name: Upload artefato macOS .app
         if: runner.os == 'macOS'
@@ -67,7 +69,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: speechscribe-windows
-          path: dist/speechscribe.exe
+          path: |
+            dist/speechscribe.exe
+            dist/speechscribe/speechscribe.exe
 
   release:
     name: Criar Release no GitHub
